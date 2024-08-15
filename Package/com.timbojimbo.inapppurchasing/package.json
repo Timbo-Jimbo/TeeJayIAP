@@ -1,8 +1,26 @@
 {
   "name": "com.timbojimbo.inapppurchasing",
   "displayName": "TeeJay IAP",
-  "version": "1.0.0-pre.1",
+  "version": "1.0.0-pre.2",
   "unity": "2021.3",
+  "licensesUrl": "https://github.com/Timbo-Jimbo/TeeJayIAP/blob/main/LICENSE",
+  "changelogUrl": "https://github.com/Timbo-Jimbo/TeeJayIAP",
+  "documentationUrl": "https://github.com/Timbo-Jimbo/TeeJayIAP",
+  "description": "A wrapper around Unity IAP, exposing it as a nicer API to work with.",
+  "author": {
+    "name": "Timbo Jimbo",
+    "url": "https://github.com/Timbo-Jimbo"
+  },
+  "keywords": [
+    "unity",
+    "iap",
+    "purchases",
+    "monetisation",
+    "in-app-purchases",
+    "gamedev",
+    "android",
+    "ios"
+  ],
   "dependencies": {
     "com.unity.purchasing": "4.12.0",
     "com.unity.services.core": "1.12.5"
