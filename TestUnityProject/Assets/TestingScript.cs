@@ -40,10 +40,12 @@ public class TestingScript : MonoBehaviour
             // implementing IIapTransactionListener is optional, all it does is let us
             // pass in objects that represent a product in our project directly in
             // Effectively: ie all the following code is effectively the same as xxx(productToPurchase.sku)
-            var isAvailableForPurchase = InAppPurchasing.Products.IsAvailableForPurchase(productToPurchase);
-            var costStringToUseInUI = InAppPurchasing.Products.GetCostString(productToPurchase, productToPurchase.ReferencePrice);
-            var accessToUnderlyingUnityProduct = InAppPurchasing.Products.Get(productToPurchase);
-            var accessToAllProducts = InAppPurchasing.Products.All;
+            var productDetails = InAppPurchasing.GetProductDetails(productToPurchase);
+            var isAvailableForPurchase = productDetails.PurchaseAvailability.IsAvailable;
+            var whyIsItNotAvailable = productDetails.PurchaseAvailability.UnavailableReason;
+            var costStringToUseInUI = productDetails.GetCostString(productToPurchase.ReferencePrice); //passing in a ref price is optional - defaults to '$1.23'
+            var accessToUnderlyingUnityProduct = productDetails.UnityProduct;
+            var allProductDetails = InAppPurchasing.AllProductDetails;
             
             // initiate purchase like so... Remember to wrap InitiateTransaction in a try/catch 
             //as it can throw an exception in certain situations (like if the product does not exists

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Unity.Services.Core;
 using UnityEngine;
 using UnityEngine.Events;
@@ -25,6 +26,7 @@ namespace TimboJimbo.InAppPurchasing
         public static UnityEvent<Transaction> OnTransactionChanged => _transactions.OnChanged;
         public static UnityEvent<Transaction> OnTransactionRemoved => _transactions.OnRemoved;
         public static IEnumerable<Transaction> ActiveTransactions => _transactions;
+        public static IEnumerable<ProductDetails> AllProductDetails => _storeController?.products.all.Select(p => GetProductDetails(p.definition.id)) ?? Enumerable.Empty<ProductDetails>();
         public static InitializeState State { get; private set; } = InitializeState.NotInitialized;
 
         private static TransactionCollection _transactions = new();
@@ -216,6 +218,8 @@ namespace TimboJimbo.InAppPurchasing
         
         public static bool Available() => State == InitializeState.Initialized;
 
+        public static Transaction GetTransaction(IInAppPurchaseProductReference iapProductRef) => GetTransaction(iapProductRef.GetReferencedProductId());
+        public static Transaction GetTransaction(string productId) => _transactions.FirstOrDefault(t => t.Product.definition.id == productId);
         public static Transaction InitiateTransaction(IInAppPurchaseProductReference iapProductRef, bool completeAnyExistingTransaction = false) => InitiateTransaction(iapProductRef.GetReferencedProductId(), completeAnyExistingTransaction);
         public static Transaction InitiateTransaction(string productId, bool completeAnyExistingTransaction = false)
         {
@@ -262,7 +266,7 @@ namespace TimboJimbo.InAppPurchasing
         {
             EnsureInitializedOrThrow();
             
-            if(transaction.State != TransactionState.ReadyToCollect)
+            if(transaction.State != TransactionState.ReadyToCollect || transaction.State != TransactionState.Deferred)
                 throw new ArgumentException($"Transaction is not in a state to be completed! State: {transaction.State}");
 
             if (wasConsumedAndAcknowledgedRemoted)
@@ -289,29 +293,36 @@ namespace TimboJimbo.InAppPurchasing
             transaction.Set(state: TransactionState.Completed);
             _transactions.RemoveTransaction(transaction);
         }
+        
+        public static ProductDetails GetProductDetails(IInAppPurchaseProductReference iapProductRef) => GetProductDetails(iapProductRef.GetReferencedProductId());
 
-        public static class Products
+        public static ProductDetails GetProductDetails(string productId)
         {
-            public static IEnumerable<Product> All => _storeController?.products.all ?? ArraySegment<Product>.Empty;
-            
-            public static Product Get(IInAppPurchaseProductReference iapProductRef) => Get(iapProductRef.GetReferencedProductId());
-            public static Product Get(string productId)
+            EnsureInitializedOrThrow();
+            var unityProduct = _storeController.products.WithID(productId);
+            var purchaseAvailability = DeterminePurchaseAvailability(unityProduct);
+            var activeTransaction = _transactions.FirstOrDefault(t => t.Product.definition.id == productId);
+
+            return new ProductDetails()
             {
-                EnsureInitializedOrThrow();
+                Id = productId,
+                UnityProduct = unityProduct,
+                ActiveTransaction = activeTransaction,
+                PurchaseAvailability = purchaseAvailability
+            };
                 
-                return _storeController.products.WithID(productId);
-            }
-            
-            public static ProductMetadata GetMetadata(IInAppPurchaseProductReference iapProductRef) => Get(iapProductRef)?.metadata;
-            public static ProductMetadata GetMetadata(string productId) => Get(productId)?.metadata;
-            public static bool IsAvailableForPurchase(IInAppPurchaseProductReference iapProductRef) => Available() && (Get(iapProductRef)?.availableToPurchase ?? false);
-            public static bool IsAvailableForPurchase(string product) => Available() && (Get(product)?.availableToPurchase ?? false);
-            public static string GetCostString(IInAppPurchaseProductReference iapProductRef, string editorPriceString = "$1.23") => GetCostString(iapProductRef.GetReferencedProductId(), editorPriceString);
-            public static string GetCostString(string product, string editorPriceString = "$1.23")
+            static PurchaseAvailability DeterminePurchaseAvailability([CanBeNull] Product product)
             {
-                if (Application.isEditor) return editorPriceString;
-                EnsureInitializedOrThrow();
-                return GetMetadata(product)?.localizedPriceString ?? "N/A";
+                if (!Available()) PurchaseAvailability.Unavailable(PurchaseUnavailableReason.Uninitialized);
+                
+                if(product == null) return PurchaseAvailability.Unavailable(PurchaseUnavailableReason.UnknownProduct);
+                if(!product.availableToPurchase) return PurchaseAvailability.Unavailable(PurchaseUnavailableReason.ProductUnavailable);
+                
+                var existingTransaction = _transactions.FirstOrDefault(t => t.Product.definition.id == product.definition.id);
+                if (existingTransaction is { State: TransactionState.UserPerformingPurchase or TransactionState.Deferred or TransactionState.ReadyToCollect }) 
+                    return PurchaseAvailability.Unavailable(PurchaseUnavailableReason.HasPendingPurchase);
+
+                return PurchaseAvailability.Available();   
             }
         }
         
@@ -369,6 +380,7 @@ namespace TimboJimbo.InAppPurchasing
                     
                     L.Verbose("Google Play configuration found. Setting deferred purchase listener...");
                     googlePlayConfiguration.SetDeferredPurchaseListener(product => DeferredPurchaseUnityCallback?.Invoke(product));
+                    googlePlayConfiguration.SetFetchPurchasesExcludeDeferred(false);
                 }
                 catch (ArgumentException)
                 {
