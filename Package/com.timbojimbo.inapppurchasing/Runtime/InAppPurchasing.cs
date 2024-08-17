@@ -266,7 +266,7 @@ namespace TimboJimbo.InAppPurchasing
         {
             EnsureInitializedOrThrow();
             
-            if(transaction.State != TransactionState.ReadyToCollect || transaction.State != TransactionState.Deferred)
+            if(transaction.State != TransactionState.ReadyToCollect && transaction.State != TransactionState.Deferred)
                 throw new ArgumentException($"Transaction is not in a state to be completed! State: {transaction.State}");
 
             if (wasConsumedAndAcknowledgedRemoted)
