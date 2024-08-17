@@ -298,7 +298,15 @@ namespace TimboJimbo.InAppPurchasing
 
         public static ProductDetails GetProductDetails(string productId)
         {
-            EnsureInitializedOrThrow();
+            if (!Available())
+            {
+                return new ProductDetails()
+                {
+                    Id = productId,
+                    PurchaseAvailability = PurchaseAvailability.Unavailable(PurchaseUnavailableReason.Uninitialized)
+                };
+            }
+            
             var unityProduct = _storeController.products.WithID(productId);
             var purchaseAvailability = DeterminePurchaseAvailability(unityProduct);
             var activeTransaction = _transactions.FirstOrDefault(t => t.Product.definition.id == productId);
