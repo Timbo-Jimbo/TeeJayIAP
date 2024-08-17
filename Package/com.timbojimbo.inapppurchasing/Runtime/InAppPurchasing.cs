@@ -269,25 +269,19 @@ namespace TimboJimbo.InAppPurchasing
             if(transaction.State != TransactionState.ReadyToCollect && transaction.State != TransactionState.Deferred)
                 throw new ArgumentException($"Transaction is not in a state to be completed! State: {transaction.State}");
 
-            if (wasConsumedAndAcknowledgedRemoted)
+            // even if the transaction was confirmed/acknowledged remotely, we still need to confirm it with unity IAP
+            //so that it can be removed from its internal pending transaction list.
+            L.Info($"Completing transaction for product: {transaction.Product.definition.id}" + (wasConsumedAndAcknowledgedRemoted ? " (Consumed and acknowledged remotely)" : ""));
+            try
             {
-                L.Info($"Completing transaction for product: {transaction.Product.definition.id} (Was consumed and acknowledged remotely)");
-                //we dont need to call ConfirmPendingPurchase here, as it was already consumed/acknowledged remotely..!
+                _storeController.ConfirmPendingPurchase(transaction.Product);
             }
-            else
+            catch (Exception e)
             {
-                L.Info($"Completing transaction for product: {transaction.Product.definition.id}");
-                try
-                {
-                    _storeController.ConfirmPendingPurchase(transaction.Product);
-                }
-                catch (Exception e)
-                {
-                    L.Exception($"Failed to confirm pending purchase for product: {transaction.Product.definition.id}", e);
-                    transaction.Set(state: TransactionState.Failed, failureReason: TransactionFailureReason.Unknown);
-                    _transactions.RemoveTransaction(transaction);
-                    return;
-                }
+                L.Exception($"Failed to confirm pending purchase for product: {transaction.Product.definition.id}", e);
+                transaction.Set(state: TransactionState.Failed, failureReason: TransactionFailureReason.Unknown);
+                _transactions.RemoveTransaction(transaction);
+                return;
             }
             
             transaction.Set(state: TransactionState.Completed);
