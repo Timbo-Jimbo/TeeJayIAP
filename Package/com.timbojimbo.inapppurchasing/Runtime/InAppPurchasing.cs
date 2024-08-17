@@ -218,9 +218,9 @@ namespace TimboJimbo.InAppPurchasing
         
         public static bool Available() => State == InitializeState.Initialized;
 
-        public static Transaction GetTransaction(IInAppPurchaseProductReference iapProductRef) => GetTransaction(iapProductRef.GetReferencedProductId());
+        public static Transaction GetTransaction(IInAppPurchaseProductReference iapProductRef) => GetTransaction(iapProductRef?.GetReferencedProductId() ?? string.Empty);
         public static Transaction GetTransaction(string productId) => _transactions.FirstOrDefault(t => t.Product.definition.id == productId);
-        public static Transaction InitiateTransaction(IInAppPurchaseProductReference iapProductRef, bool completeAnyExistingTransaction = false) => InitiateTransaction(iapProductRef.GetReferencedProductId(), completeAnyExistingTransaction);
+        public static Transaction InitiateTransaction(IInAppPurchaseProductReference iapProductRef, bool completeAnyExistingTransaction = false) => InitiateTransaction(iapProductRef?.GetReferencedProductId() ?? string.Empty, completeAnyExistingTransaction);
         public static Transaction InitiateTransaction(string productId, bool completeAnyExistingTransaction = false)
         {
             EnsureInitializedOrThrow();
@@ -294,7 +294,7 @@ namespace TimboJimbo.InAppPurchasing
             _transactions.RemoveTransaction(transaction);
         }
         
-        public static ProductDetails GetProductDetails(IInAppPurchaseProductReference iapProductRef) => GetProductDetails(iapProductRef.GetReferencedProductId());
+        public static ProductDetails GetProductDetails(IInAppPurchaseProductReference iapProductRef) => GetProductDetails(iapProductRef?.GetReferencedProductId() ?? string.Empty);
 
         public static ProductDetails GetProductDetails(string productId)
         {
