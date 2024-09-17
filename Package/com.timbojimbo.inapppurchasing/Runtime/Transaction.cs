@@ -16,7 +16,7 @@ namespace TimboJimbo.InAppPurchasing
 
         public Transaction(Product product)
         {
-            Product = product;
+            Product = product ?? throw new System.ArgumentNullException(nameof(product));
         }
 
         internal void Set(TransactionState? state = null, TransactionFailureReason? failureReason = null, UnifiedReceipt receipt = null, string transactionId = null, InAppPurchaseToken? token = null)
