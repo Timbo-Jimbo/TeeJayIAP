@@ -95,7 +95,7 @@ namespace TimboJimbo.InAppPurchasing
                     {
                         unityStoreListener.InitializedUnityCallback += (controller, extensions) =>
                         {
-                            if (_storeController == null)
+                            if (controller == null)
                             {
                                 L.Error("Purchasing initialized but no store controller found!");
                                 tcs.TrySetResult(InitializeResult.Failed);
