@@ -90,28 +90,26 @@ namespace TimboJimbo.InAppPurchasing
                     }
 
                     var unityStoreListener = new UnityStoreListener();
-                    var tcs = new TaskCompletionSource<InitializeResult>();
+                    var tcs = new TaskCompletionSource<object>();
                     
                     {
                         unityStoreListener.InitializedUnityCallback += (controller, extensions) =>
                         {
                             if (controller == null)
                             {
-                                L.Error("Purchasing initialized but no store controller found!");
-                                tcs.TrySetResult(InitializeResult.Failed);
+                                tcs.TrySetException(new InAppPurchasingInitException("Purchasing initialized but no store controller found!"));
                                 return;
                             }
                             
                             L.Info("Purchasing initialized successfully!");
                             _storeController = controller;
                             _extensions = extensions;
-                            tcs.TrySetResult(InitializeResult.Success);
+                            tcs.TrySetResult(null);
                         };
 
                         unityStoreListener.InitializeFailedUnityCallback += (error, errorString) =>
                         {
-                            L.Error($"Purchasing initialization failed! Error: {error}, Error String: {errorString}");
-                            tcs.TrySetResult(InitializeResult.Failed);
+                            tcs.TrySetException(new InAppPurchasingInitException($"Purchasing initialization failed! Error: {error}, Error String: {errorString}"));
                         };
 
                         unityStoreListener.ProcessPurchaseUnityCallback += purchaseEvent =>
@@ -194,7 +192,11 @@ namespace TimboJimbo.InAppPurchasing
                     L.Info("Initializing Purchasing...");
                     UnityPurchasing.Initialize(unityStoreListener, builder);
                     
-                    return await tcs.Task.WithCancellationToken(ct);
+                    //will throw if initialization fails
+                    await tcs.Task.WithCancellationToken(ct);
+                    
+                    //no exception thrown? all good!
+                    return InitializeResult.Success;
                 }
                 finally
                 {
